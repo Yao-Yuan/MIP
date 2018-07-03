@@ -3,6 +3,7 @@ from tqdm import tqdm
 import keras
 import numpy as np
 from sklearn.model_selection import train_test_split
+from keras import backend
 
 # Shortcuts to the layer we need to make it more readable.
 Activation = keras.layers.Activation
@@ -39,16 +40,25 @@ def localization_module(input_layer, n_filters):
     conv2 = convolution_block(conv1, n_filters, kernel = (1,1,1))
     return conv2
 
+def dice_coef(y_true, y_pred):
+    y_true_f = backend.flatten(y_true)
+    y_pred_f = backend.flatten(y_pred)
+    intersection = backend.sum(y_true_f * y_pred_f)
+    smooth = 1
+    return (2. * intersection + smooth) / (backend.sum(y_true_f) + backend.sum(y_pred_f) + smooth)
+
+def dice_coef_loss(y_true, y_pred):
+    return -dice_coef(y_true, y_pred)
+
 SIZE = 256
 
-def conv_net(activation_type, depth = 5, n_base_filters = 16, dropout_rate = 0.3): 
-    inputs = Input(shape=[32, SIZE, SIZE, 1], name='image')
+def conv_net(activation_type = "sigmoid", n_slices = 32, depth = 5, n_base_filters = 16, dropout_rate = 0.3): 
+    inputs = Input(shape=[n_slices, SIZE, SIZE, 1], name='image')
     current_layer = inputs
     depth = 5
     n_base_filters = 16  #the number of filters in the first level
     n_segmentation_levels = 2
     n_labels = 1
-    activation_type = "sigmoid"
     dropout_rate = 0.3
 
     level_output = list()

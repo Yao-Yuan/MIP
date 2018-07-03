@@ -1,7 +1,7 @@
 '''
 Functions to preprocessing input data
 - to3dpatches: cut 3d stack to smaller 3d stackes
-- normalize: normalize data to 0-1
+- normalize: normalize data to 0-1 (also transform from dicom files to pixel arrays
 @author: Yuan
 '''
 
@@ -53,9 +53,9 @@ def to3dpatches (origin, labelImg, n_slices = 32, complete = False):
     return n_stack, originStacks, labelStacks
 
 '''
-@param: origin_data: input original data which will be normalize to [0,1]
+@param: origin_data: input original data (dicom images) which will be normalize to [0,1]
         mask_data: input masks which will be normalize to 0/1
-@return: x_list, y_list: normalized data of origin_data and mask_data
+@return: x_list, y_list: normalized data of origin_data and mask_data (pixel_array)
 '''
 def normalize(origin_data, mask_data):
     x_list = [(imagefile.pixel_array-imagefile.SmallestImagePixelValue)/(imagefile.LargestImagePixelValue  -imagefile.SmallestImagePixelValue) for imagefile in origin_data ]
