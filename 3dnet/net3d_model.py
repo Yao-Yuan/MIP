@@ -48,7 +48,7 @@ def dice_coef(y_true, y_pred):
     return (2. * intersection + smooth) / (backend.sum(y_true_f) + backend.sum(y_pred_f) + smooth)
 
 def dice_coef_loss(y_true, y_pred):
-    return -dice_coef(y_true, y_pred)
+    return 1.-dice_coef(y_true, y_pred)
 
 SIZE = 256
 
