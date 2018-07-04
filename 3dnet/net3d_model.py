@@ -12,6 +12,7 @@ BatchNormalization = keras.layers.BatchNormalization
 Conv3D = keras.layers.Conv3D
 Input = keras.layers.Input
 UpSampling3D = keras.layers.UpSampling3D
+#Deconv3D = keras.layers.conv3dtranspose
 Dropout = keras.layers.Dropout
 Add = keras.layers.Add
 Concatenate = keras.layers.concatenate
@@ -33,6 +34,7 @@ def context_module(input_layer, n_filters, dropout_rate = 0.3): #??  channels_fi
 def up_sampling_module(input_layer, n_filters, size = (2,2,2)):
     up_sample = UpSampling3D(size=size)(input_layer)
     convolution = convolution_block(up_sample, n_filters)
+    #conv3dtranspose
     return convolution
 
 def localization_module(input_layer, n_filters):
@@ -50,10 +52,8 @@ def dice_coef(y_true, y_pred):
 def dice_coef_loss(y_true, y_pred):
     return 1.-dice_coef(y_true, y_pred)
 
-SIZE = 256
-
-def conv_net(activation_type = "sigmoid", n_slices = 32, depth = 5, n_base_filters = 16, dropout_rate = 0.3): 
-    inputs = Input(shape=[n_slices, SIZE, SIZE, 1], name='image')
+def conv_net(size = 256, activation_type = "sigmoid", n_slices = 32, depth = 5, n_base_filters = 16, dropout_rate = 0.3): 
+    inputs = Input(shape=[n_slices, size, size, 1], name='image')
     current_layer = inputs
     depth = 5
     n_base_filters = 16  #the number of filters in the first level
@@ -72,7 +72,7 @@ def conv_net(activation_type = "sigmoid", n_slices = 32, depth = 5, n_base_filte
         if current_layer is inputs:
             in_conv = convolution_block(current_layer, n_level_filters)
         else:
-            in_conv = convolution_block(current_layer, n_level_filters, strides = (2,2,2))
+            in_conv = convolution_block(current_layer, n_level_filters, kernel = (2,2,2),strides = (2,2,2)) #decrease kernel due to memory limit
 
         context_output = context_module(in_conv, n_level_filters, dropout_rate=dropout_rate)
 
