@@ -3,7 +3,7 @@ from tqdm import tqdm
 import keras
 import numpy as np
 from sklearn.model_selection import train_test_split
-from keras import backend
+from keras import backend as K
 
 # Shortcuts to the layer we need to make it more readable.
 Activation = keras.layers.Activation
@@ -41,13 +41,20 @@ def localization_module(input_layer, n_filters):
     conv1 = convolution_block(input_layer, n_filters)
     conv2 = convolution_block(conv1, n_filters, kernel = (1,1,1))
     return conv2
-
+'''
 def dice_coef(y_true, y_pred):
-    y_true_f = backend.flatten(y_true)
-    y_pred_f = backend.flatten(y_pred)
-    intersection = backend.sum(y_true_f * y_pred_f)
+    y_true_f = K.flatten(y_true)
+    y_pred_f = K.flatten(y_pred)
+    intersection = K.sum(y_true_f * y_pred_f)
     smooth = 1
-    return (2. * intersection + smooth) / (backend.sum(y_true_f) + backend.sum(y_pred_f) + smooth)
+    return (2. * intersection + smooth) / (K.sum(y_true_f) + K.sum(y_pred_f) + smooth)
+'''
+
+def dice_coef(y_true, y_pred, smooth=1):
+    intersection = K.sum(y_true * y_pred, axis=[1,2,3])
+    union = K.sum(y_true, axis=[1,2,3]) + K.sum(y_pred, axis=[1,2,3])
+    K.print_tensor(intersection, message='')
+    return K.mean( (2. * intersection + smooth) / (union + smooth), axis=0)
 
 def dice_coef_loss(y_true, y_pred):
     return 1.-dice_coef(y_true, y_pred)
@@ -72,7 +79,7 @@ def conv_net(size = 256, activation_type = "sigmoid", n_slices = 32, depth = 5, 
         if current_layer is inputs:
             in_conv = convolution_block(current_layer, n_level_filters)
         else:
-            in_conv = convolution_block(current_layer, n_level_filters, kernel = (2,2,2),strides = (2,2,2)) #decrease kernel due to memory limit
+            in_conv = convolution_block(current_layer, n_level_filters, kernel = (3,3,3),strides = (2,2,2)) #decrease kernel due to memory limit
 
         context_output = context_module(in_conv, n_level_filters, dropout_rate=dropout_rate)
 

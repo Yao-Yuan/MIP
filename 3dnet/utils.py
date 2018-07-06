@@ -1,6 +1,7 @@
 import os
 import pydicom
-
+import numpy as np
+import scipy
 '''
 Filter image and mask files based on a text file and designated size (to be determined: not used now because of the use of 3d patches)
 @param: textfile - a file that contains filenames that is good to use
@@ -64,6 +65,19 @@ def resample(scan, new_spacing=[0.42,0.42,0.42]):
     scan = scipy.ndimage.interpolation.zoom(scan.pixel_array, real_resize_factor, mode='nearest')
     
     return scan
+
+'''
+Pad images that need to be predicted with zeros (currently padding at the end of image). (e.g. 220*256*256 -> 256*256*256 the last 36 layer is zeros)
+@param: image - input image (as numpy matrix)
+        box_size - box_size that is currently use (will padding images accordingly so that we can have integer number of boxnes)
+@return: out - out put padded arrays
+
+'''
+def padImage (image, box_size):
+    image_size = image.shape
+    padding_size = (int(image_size[0]/box_size) + 1)*box_size - image_size[0]
+    out = np.append(image, np.zeros((padding_size, image_size[1], image_size[2])), axis = 0)
+    return out
 
 '''
 Visulize 3d images
