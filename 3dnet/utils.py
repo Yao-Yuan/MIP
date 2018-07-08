@@ -1,7 +1,13 @@
+'''
+Trivial methods to realize some functions
+@author: Yuan
+'''
 import os
 import pydicom
 import numpy as np
 import scipy
+from skimage import measure, morphology
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 '''
 Filter image and mask files based on a text file and designated size (to be determined: not used now because of the use of 3d patches)
 @param: textfile - a file that contains filenames that is good to use
@@ -81,29 +87,20 @@ def padImage (image, box_size):
 
 '''
 Visulize 3d images
-@param: image - input image
-        threshold
-Not yet finished
+@param: image - input 3d image
+        threshold - thresholding the 3d image
 '''
 def plot_3d(image, threshold=-300):
     
-    # Position the scan upright, 
-    # so the head of the patient would be at the top facing the camera
-    p = image.transpose(2,0,1)
-    
-    verts, faces = measure.marching_cubes_classic(p, threshold)
+    verts, faces = measure.marching_cubes_classic(image, threshold)
 
     fig = plt.figure(figsize=(10, 10))
-    ax = fig.add_subplot(121, projection='3d')
-
-    # Fancy indexing: `verts[faces]` to generate a collection of triangles
-    mesh = Poly3DCollection(verts[faces], alpha=0.70)
-    face_color = [0.45, 0.45, 0.75]
-    mesh.set_facecolor(face_color)
+    ax = fig.add_subplot(111, projection='3d')
+    mesh = Poly3DCollection(verts[faces])
     ax.add_collection3d(mesh)
 
-    ax.set_xlim(0, p.shape[0])
-    ax.set_ylim(0, p.shape[1])
-    ax.set_zlim(0, p.shape[2])
+    ax.set_xlim(0, image.shape[0])
+    ax.set_ylim(0, image.shape[1])
+    ax.set_zlim(0, image.shape[2])
 
     plt.show()
