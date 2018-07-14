@@ -95,11 +95,14 @@ def to3dpatches (origin, depth = 32, size = 32, toBoxes = True):
         return n_stack, stacks
 '''
 '''
-@param: origin_data: input original data (dicom images) which will be normalize to [0,1]
+@param: origin_data: input original data (dicom images) which will be normalize to [0,1] depending on the threshold
         mask_data: input masks which will be normalize to 0/1
+        threshold_l: lower threshold
+        threshold_h: higher threshold
 @return: x_list, y_list: normalized data of origin_data and mask_data (pixel_array)
 '''
-def normalize(origin_data, mask_data):
-    x_list = [((imagefile.pixel_array-imagefile.SmallestImagePixelValue)/(imagefile.LargestImagePixelValue  -imagefile.SmallestImagePixelValue)).astype(np.float32) for imagefile in origin_data ]
+def normalize(origin_data, mask_data, threshold_l = -1000, threshold_h = 2000):
+    x_list = [ np.clip(imagefile.pixel_array, threshold_l, threshold_h)  for imagefile in origin_data]
+    x_list = [ (image_array-threshold_l)/(threshold_h-threshold_l) for image_array in x_list]
     y_list = [(mskfile.pixel_array==1024).astype(np.float32) for mskfile in mask_data]
     return x_list, y_list
