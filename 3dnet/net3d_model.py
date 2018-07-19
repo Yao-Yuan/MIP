@@ -12,7 +12,6 @@ BatchNormalization = keras.layers.BatchNormalization
 Conv3D = keras.layers.Conv3D
 Input = keras.layers.Input
 UpSampling3D = keras.layers.UpSampling3D
-#Deconv3D = keras.layers.conv3dtranspose
 Dropout = keras.layers.Dropout
 Add = keras.layers.Add
 Concatenate = keras.layers.concatenate

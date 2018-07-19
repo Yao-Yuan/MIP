@@ -94,17 +94,31 @@ Visulize 3d images
 @param: image - input 3d image
         threshold - thresholding the 3d image
 '''
-def plot_3d(image, threshold=-300):
-    
-    verts, faces = measure.marching_cubes_classic(image, threshold)
 
-    fig = plt.figure(figsize=(10, 10))
-    ax = fig.add_subplot(111, projection='3d')
+
+def plot_3d(image1, image2=None, threshold=-300, threshold2=0.5):
+    verts, faces = measure.marching_cubes_classic(image1, threshold)
+
+    fig = plt.figure(figsize=(20, 10))
+    if image2 is None:
+        ax = fig.add_subplot(111, projection='3d')
+    else:
+        ax = fig.add_subplot(121, projection='3d')
     mesh = Poly3DCollection(verts[faces])
     ax.add_collection3d(mesh)
 
-    ax.set_xlim(0, image.shape[0])
-    ax.set_ylim(0, image.shape[1])
-    ax.set_zlim(0, image.shape[2])
+    ax.set_xlim(0, image1.shape[0])
+    ax.set_ylim(0, image1.shape[1])
+    ax.set_zlim(0, image1.shape[2])
+
+    if image2 is not None:
+        ax2 = fig.add_subplot(122, projection='3d')
+        verts2, faces2 = measure.marching_cubes_classic(image2, threshold2)
+        mesh2 = Poly3DCollection(verts2[faces2])
+
+        ax2.add_collection3d(mesh2)
+        ax2.set_xlim(0, image2.shape[0])
+        ax2.set_ylim(0, image2.shape[1])
+        ax2.set_zlim(0, image2.shape[2])
 
     plt.show()

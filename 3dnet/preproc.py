@@ -6,7 +6,6 @@ Functions to preprocessing input data
 '''
 
 import numpy as np
-from numpy import float32
 
 '''
 @pram:  origin - a numpy array of a 3d stack for training data
@@ -17,7 +16,6 @@ from numpy import float32
         toBoxes - True: output boxes, False: output patches
 @output: n_stack - number of stacks containing of n_slices slices from the images
          stacks - a list of output stacks
-@author: Yuan
 '''
 def to3dpatches (origin, labelImg, depth = 32, size = 32, complete = False, toBoxes = True):
     originStacks = []
