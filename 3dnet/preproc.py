@@ -1,13 +1,12 @@
 '''
 Functions to preprocessing input data
-- to3dpatches: cut 3d stack to smaller 3d stackes
-- normalize: normalize data to 0-1 (also transform from dicom files to pixel arrays
 @author: Yuan
 '''
 
 import numpy as np
 
 '''
+Cut 3d stack to smaller 3d stackes
 @pram:  origin - a numpy array of a 3d stack for training data
         labelImg - must have the same depth of origin, labelled data
         depth - preferred number of slices per output stack (please make it a even number for now)
@@ -44,7 +43,7 @@ def to3dpatches (origin, labelImg, depth = 32, size = 32, complete = False, toBo
         except ValueError as err:
             print("Very likely to contain zero information in the labelled data")
             return err
-        print(non_zero_range)
+        #print(non_zero_range)
         n_object_slice = non_zero_range[1] - non_zero_range[0]  
         n_stack = int(n_object_slice/depth) + 1
     #print(non_zero_range)
@@ -93,14 +92,29 @@ def to3dpatches (origin, depth = 32, size = 32, toBoxes = True):
         return n_stack, stacks
 '''
 '''
+Normalize data to 0-1 (also transform from dicom files to pixel arrays
 @param: origin_data: input original data (dicom images) which will be normalize to [0,1] depending on the threshold
         mask_data: input masks which will be normalize to 0/1
         threshold_l: lower threshold
         threshold_h: higher threshold
 @return: x_list, y_list: normalized data of origin_data and mask_data (pixel_array)
 '''
-def normalize(origin_data, mask_data, threshold_l = -1000, threshold_h = 2000):
+def normalizeDicom(origin_data, mask_data, threshold_l = -1000, threshold_h = 2000):
     x_list = [ np.clip(imagefile.pixel_array, threshold_l, threshold_h)  for imagefile in origin_data]
     x_list = [ (image_array-threshold_l)/(threshold_h-threshold_l) for image_array in x_list]
     y_list = [(mskfile.pixel_array==1024).astype(np.float32) for mskfile in mask_data]
+    return x_list, y_list
+
+'''
+Normalize numpy data to 0-1
+@param: origin_data: input original data which will be normalize to [0,1] depending on the threshold
+        mask_data: input masks which will be normalize to 0/1
+        threshold_l: lower threshold
+        threshold_h: higher threshold
+@return: x, y: normalized data of origin_data and mask_data (pixel_array)
+'''
+def normalize(origin_data, mask_data, threshold_l = -1000, threshold_h = 2000):
+    x_list = [ np.clip(image, threshold_l, threshold_h)  for image in origin_data]
+    x_list = [ (data-threshold_l)/(threshold_h-threshold_l) for data in x_list]
+    y_list = [(mask ==1024).astype(np.float32) for mask in mask_data]
     return x_list, y_list

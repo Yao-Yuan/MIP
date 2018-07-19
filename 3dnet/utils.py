@@ -6,6 +6,7 @@ import os
 import pydicom
 import numpy as np
 import scipy
+import matplotlib.pyplot as plt
 from skimage import measure, morphology
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 '''
@@ -13,7 +14,7 @@ Filter image and mask files based on a text file and designated size and also fi
 @param: textfile - a file that contains filenames that is good to use
         img_dir - path for images
         msk_dir - path for masks
-        size - only return images & masks with this size (default 220*256*256)   !!!!TO DO: merge this function with the creating script for data that generate normal_data.txt!
+        size - only return images & masks with this size (default 220*256*256) 
         mask_threshold - only output images that has mask label pixel number within the threshold.
 @return: img_name_list: namelist of available images
          msk_name_list: namelist of available masks which is corresponding to the img_name_list
@@ -59,7 +60,6 @@ Resample images by interpolating scans with same layer (will make image deeper) 
 @param: scan-input image (as numpy matrix)
         new_spacing- as an 1*3 array
 @return: numpy matrix with new spacing
-@author: Yuan
 '''
 def resample(scan, new_spacing=[0.42,0.42,0.42]):
     # Determine current pixel spacing
@@ -78,15 +78,16 @@ def resample(scan, new_spacing=[0.42,0.42,0.42]):
 
 '''
 Pad images that need to be predicted with zeros (currently padding at the end of image). (e.g. 220*256*256 -> 256*256*256 the last 36 layer is zeros)
-@param: image - input image (as numpy matrix)
-        box_size - box_size that is currently use (will padding images accordingly so that we can have integer number of boxnes)
+@param: image_list - input images (as a list numpy matrix)
+        box_size - box_size that is currently use (will padding images accordingly so that we can have integer number of boxes)
 @return: out - output padded arrays
-
 '''
-def padImage (image, box_size):
-    image_size = image.shape
-    padding_size = (int(image_size[0]/box_size) + 1)*box_size - image_size[0]
-    out = np.append(image, np.zeros((padding_size, image_size[1], image_size[2])), axis = 0)
+def padImage (image_list, box_size):
+    out  = []
+    for image in image_list:
+        image_size = image.shape
+        padding_size = (int(image_size[0]/box_size) + 1)*box_size - image_size[0]
+        out.append(np.append(image, np.zeros((padding_size, image_size[1], image_size[2])), axis=0))
     return out
 
 '''
