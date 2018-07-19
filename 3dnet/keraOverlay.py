@@ -8,6 +8,7 @@ import numpy as np
 import random
 import preproc
 import utils
+import scipy.ndimage.filters as filters
 from keras import backend as K
 '''
 Generate data and mask batches to replace default data generator in keras and also preprocessing data
@@ -24,9 +25,11 @@ Generate data and mask batches to replace default data generator in keras and al
 '''
 def generate_batch_data(data_dir, mask_dir, look_up_list, batch_size=2):
     i = 0
-    image_batch = []
-    mask_batch = []
-    while i < 6:
+    output_data_batch = []
+    output_mask_batch = []
+    while True:
+        image_batch = []
+        mask_batch = []
         for j in range(batch_size):
             if i == len(look_up_list):  # shuffle the data for each epoch
                 i = 0
@@ -44,8 +47,12 @@ def generate_batch_data(data_dir, mask_dir, look_up_list, batch_size=2):
 
         image_batch = utils.padImage(image_batch, 64)  # currently pad with 0 to test network
         mask_batch = utils.padImage(mask_batch, 64)
+        #for n in range(batch_size):
+        #    output_data_batch
+        image_batch = [filters.gaussian_filter(image, 1.0)[::2,::2,::2] for image in image_batch]
+        mask_batch = [filters.gaussian_filter(mask, 1.0)[::2,::2,::2] for mask in mask_batch]
 
-    # print(np.array(mask_batch).shape)
+        print(np.array(mask_batch).shape)
         yield np.array(image_batch)[...,np.newaxis], np.array(mask_batch)[...,np.newaxis]
 
 
