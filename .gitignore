@@ -1,3 +1,4 @@
 *checkpoints*
-*pyc
+*.pyc
+__pycache__
 .gitignore

@@ -15,6 +15,7 @@ UpSampling3D = keras.layers.UpSampling3D
 Dropout = keras.layers.Dropout
 Add = keras.layers.Add
 Concatenate = keras.layers.concatenate
+AveragePooling3D = keras.layers.AveragePooling3D
 
 def convolution_block(input_layer, n_filters, kernel = (3,3,3), activation = None, padding = 'same', strides = (1,1,1)):
     layer = Conv3D(n_filters, kernel, padding = padding, strides = strides)(input_layer)
@@ -94,8 +95,7 @@ def conv_net(size = 256, activation_type = "sigmoid", n_slices = 32, depth = 5, 
         localization = localization_module(concatenate, level_filter_numbers[level_number])
         current_layer = localization
         if level_number < n_segmentation_levels:
-            segmentation_layers.insert(0, convolution_block(current_layer, n_filters = n_labels, kernel = (1,1,1)))
-
+            segmentation_layers.insert(0, Conv3D(n_labels, (1, 1, 1))(current_layer))
     output = None
     for level_number in reversed(range(n_segmentation_levels)):
         segmentation = segmentation_layers[level_number]
@@ -110,4 +110,40 @@ def conv_net(size = 256, activation_type = "sigmoid", n_slices = 32, depth = 5, 
 
     prediction = Activation(activation_type)(output)
     model = keras.models.Model(inputs=inputs, outputs=prediction)        
+    return model, prediction
+
+def simple_unet(DEPTH, SIZE):
+    # A common building block in Conv Nets is this Conv3x3-BatchNorm-Relu combination.
+    # The `same` padding is different from the U-Net paper and will lead to edge effects.
+    image = Input(shape=[DEPTH, SIZE, SIZE, 1], name='image')
+
+    x = Conv3D(filters=16, kernel_size=(3, 3, 3), padding='same')(image)
+    x = BatchNormalization()(x)
+    x = Activation('relu')(x)
+
+    # Save the large scale output to concatenate with later.
+    x_large = x
+    x_small = AveragePooling3D(pool_size=(2, 2, 2))(x)
+
+    x = Conv3D(32, (3, 3, 3), padding='same')(x_small)
+    x = BatchNormalization()(x)
+    x = Activation('relu')(x)
+
+    x_upsampled = UpSampling3D(size=(2, 2, 2))(x)
+    x = keras.layers.concatenate([x_large, x_upsampled])
+
+    x = Conv3D(16, (3, 3, 3), padding='same')(x)
+    x = BatchNormalization()(x)
+    x = Activation('relu')(x)
+
+    # Logits is a common name to give to the pre-sigmoid or softmax values.
+    # The convention comes statistics and logistic regression I believe.
+    logits = Conv3D(1, (1, 1, 1), padding='same', name='logit')(x)
+
+    # The sigmoid will ensure all our prediction as in the range [0, 1].
+    # It also suggests a probabilistic interpretation of our output but we skip this for now.
+    prediction = Activation('sigmoid', name='prediction')(logits)
+
+    # In the functional API everything is tied together with a Model() instance.
+    model = keras.models.Model(inputs=image, outputs=prediction)
     return model, prediction

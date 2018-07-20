@@ -52,7 +52,7 @@ def generate_batch_data(data_dir, mask_dir, look_up_list, batch_size=2):
         image_batch = [filters.gaussian_filter(image, 1.0)[::2,::2,::2] for image in image_batch]
         mask_batch = [filters.gaussian_filter(mask, 1.0)[::2,::2,::2] for mask in mask_batch]
 
-        print(np.array(mask_batch).shape)
+        #print(np.array(mask_batch).shape)
         yield np.array(image_batch)[...,np.newaxis], np.array(mask_batch)[...,np.newaxis]
 
 
