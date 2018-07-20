@@ -5,11 +5,14 @@ Some functions to overload some functions in keras
 import os
 import pydicom
 import numpy as np
+import math
 import random
 import preproc
 import utils
 import scipy.ndimage.filters as filters
 from keras import backend as K
+from functools import partial
+from keras.callbacks import ModelCheckpoint, CSVLogger, LearningRateScheduler, ReduceLROnPlateau, EarlyStopping
 '''
 Generate data and mask batches to replace default data generator in keras and also preprocessing data
 @parm: data_dir - directory where data files (dicom files) is stored
@@ -23,10 +26,8 @@ Generate data and mask batches to replace default data generator in keras and al
         content = f.readlines()
         normal_namelist = [x.strip() for x in content] 
 '''
-def generate_batch_data(data_dir, mask_dir, look_up_list, batch_size=2):
+def generate_batch_data(data_dir, mask_dir, look_up_list, batch_size=2, scaling=2):
     i = 0
-    output_data_batch = []
-    output_mask_batch = []
     while True:
         image_batch = []
         mask_batch = []
@@ -49,18 +50,40 @@ def generate_batch_data(data_dir, mask_dir, look_up_list, batch_size=2):
         mask_batch = utils.padImage(mask_batch, 64)
         #for n in range(batch_size):
         #    output_data_batch
-        image_batch = [filters.gaussian_filter(image, 1.0)[::2,::2,::2] for image in image_batch]
-        mask_batch = [filters.gaussian_filter(mask, 1.0)[::2,::2,::2] for mask in mask_batch]
+        image_batch = [filters.gaussian_filter(image, 1.0)[::scaling, ::scaling, ::scaling] for image in image_batch]
+        mask_batch = [filters.gaussian_filter(mask, 1.0)[::scaling, ::scaling, ::scaling] for mask in mask_batch]
 
         #print(np.array(mask_batch).shape)
-        yield np.array(image_batch)[...,np.newaxis], np.array(mask_batch)[...,np.newaxis]
+        yield np.array(image_batch)[..., np.newaxis], np.array(mask_batch)[..., np.newaxis]
 
 
 def dice_coef(y_true, y_pred, smooth=1):
-    intersection = K.sum(y_true * y_pred, axis=[1,2,3])
-    union = K.sum(y_true, axis=[1,2,3]) + K.sum(y_pred, axis=[1,2,3])
-    K.print_tensor(intersection, message='')
-    return K.mean( (2. * intersection + smooth) / (union + smooth), axis=0)
+    y_true_f = K.flatten(y_true)
+    y_pred_f = K.flatten(y_pred)
+    intersection = K.dot(y_true_f, K.transpose(y_pred_f))
+    union = K.dot(y_true_f, K.transpose(y_true_f))+K.dot(y_pred_f, K.transpose(y_pred_f))
+    return (2. * intersection + smooth) / (union + smooth)
 
 def dice_coef_loss(y_true, y_pred):
-    return 1.-dice_coef(y_true, y_pred)
+    return K.mean(1-dice_coef(y_true, y_pred), axis=-1)
+
+
+# learning rate schedule
+def step_decay(epoch, initial_lrate, drop, epochs_drop):
+    return initial_lrate * math.pow(drop, math.floor((1+epoch)/float(epochs_drop)))
+
+def get_callbacks(model_file, initial_learning_rate=0.0001, learning_rate_drop=0.5, learning_rate_epochs=None,
+                  learning_rate_patience=50, logging_file="training.log", verbosity=1,
+                  early_stopping_patience=None):
+    callbacks = list()
+    callbacks.append(ModelCheckpoint(model_file, save_best_only=True))
+    callbacks.append(CSVLogger(logging_file, append=True))
+    if learning_rate_epochs:
+        callbacks.append(LearningRateScheduler(partial(step_decay, initial_lrate=initial_learning_rate,
+                                                       drop=learning_rate_drop, epochs_drop=learning_rate_epochs)))
+    else:
+        callbacks.append(ReduceLROnPlateau(factor=learning_rate_drop, patience=learning_rate_patience,
+                                           verbose=verbosity))
+    if early_stopping_patience:
+        callbacks.append(EarlyStopping(verbose=verbosity, patience=early_stopping_patience))
+    return callbacks

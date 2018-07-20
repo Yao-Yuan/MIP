@@ -9,6 +9,9 @@ import scipy
 import matplotlib.pyplot as plt
 from skimage import measure, morphology
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+import preproc
+import scipy.ndimage.filters as filters
+
 '''
 Filter image and mask files based on a text file and designated size and also filter out unnatural ones
 @param: textfile - a file that contains filenames that is good to use
@@ -97,7 +100,7 @@ Visulize 3d images
 '''
 
 
-def plot_3d(image1, image2=None, threshold=-300, threshold2=0.5):
+def plot_3d(image1, image2=None, threshold=-1000, threshold2=0.5):
     verts, faces = measure.marching_cubes_classic(image1, threshold)
 
     fig = plt.figure(figsize=(20, 10))
@@ -123,3 +126,39 @@ def plot_3d(image1, image2=None, threshold=-300, threshold2=0.5):
         ax2.set_zlim(0, image2.shape[2])
 
     plt.show()
+
+'''
+Load data from directory
+@param: image_dir
+        mask_dir
+        look_up_list
+        scaling
+        OPaslist
+        
+@return: image_list
+         mask_list
+'''
+def load_data(data_dir, mask_dir, look_up_list, sigma_image=4, sigma_mask=1, scaling=2, OPaslist=False):
+    image_list = []
+    mask_list = []
+    for filename in look_up_list:
+        try:
+            sample = pydicom.read_file(os.path.join(data_dir, filename))
+            mask = pydicom.read_file(os.path.join(mask_dir, filename.split('.')[0] + '.result.dcm'))
+        except:
+            print("Error: unable to load data!")
+        image_list.append(sample.pixel_array)
+        mask_list.append(mask.pixel_array)
+
+    image_list, mask_list = preproc.normalize(image_list, mask_list)  # normalize to 0-1
+
+    image_list = padImage(image_list, 64)  # currently pad with 0 to test network
+    mask_list = padImage(mask_list, 64)
+
+    image_list = [filters.gaussian_filter(image, sigma_image)[::scaling, ::scaling, ::scaling] for image in image_list]
+    mask_list = [filters.gaussian_filter(mask, sigma_mask)[::scaling, ::scaling, ::scaling] for mask in mask_list]
+
+    if OPaslist:
+        return image_list, mask_list  # output as list
+    else:
+        return np.array(image_list)[..., np.newaxis], np.array(mask_list)[..., np.newaxis]  # output as array corresponding to network

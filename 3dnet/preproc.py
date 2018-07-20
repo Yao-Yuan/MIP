@@ -16,7 +16,7 @@ Cut 3d stack to smaller 3d stackes
 @output: n_stack - number of stacks containing of n_slices slices from the images
          stacks - a list of output stacks
 '''
-def to3dpatches (origin, labelImg, depth = 32, size = 32, complete = False, toBoxes = True):
+def to3dpatches (origin, labelImg, depth = 32, size = 32, complete = False, toBoxes = True, onlyValid = False):
     originStacks = []
     labelStacks = []
     origin_boxes = []
@@ -64,8 +64,16 @@ def to3dpatches (origin, labelImg, depth = 32, size = 32, complete = False, toBo
         for origin_stack, label_stack in zip(originStacks, labelStacks):
             for i in range(n_alongaxis):
                 for j in range(n_alongaxis):
-                    origin_boxes.append(origin_stack[:,i*size:(i+1)*size,j*size:(j+1)*size])
-                    label_boxes.append(label_stack[:,i*size:(i+1)*size,j*size:(j+1)*size])
+                    origin_box = origin_stack[:,i*size:(i+1)*size,j*size:(j+1)*size]
+                    lable_box = label_stack[:,i*size:(i+1)*size,j*size:(j+1)*size]
+                    if onlyValid:                                 #Only out put boxes with aneurysm
+                        if np.any(lable_box):
+                            origin_boxes.append(origin_box)
+                            label_boxes.append(lable_box)
+                    else:
+                        origin_boxes.append(origin_box)
+                        label_boxes.append(lable_box)
+
         return len(origin_boxes), origin_boxes, label_boxes
     else:
         return n_stack, originStacks, labelStacks
