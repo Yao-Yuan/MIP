@@ -90,7 +90,7 @@ def padImage (image_list, box_size):
     for image in image_list:
         image_size = image.shape
         padding_size = (int(image_size[0]/box_size) + 1)*box_size - image_size[0]
-        out.append(np.append(image, np.zeros((padding_size, image_size[1], image_size[2])), axis=0))
+        out.append(np.append(image, np.zeros((padding_size, image_size[1], image_size[2]),dtype=np.float32), axis=0))
     return out
 
 '''
@@ -162,3 +162,26 @@ def load_data(data_dir, mask_dir, look_up_list, sigma_image=4, sigma_mask=1, sca
         return image_list, mask_list  # output as list
     else:
         return np.array(image_list)[..., np.newaxis], np.array(mask_list)[..., np.newaxis]  # output as array corresponding to network
+
+'''
+Stitch boxs/stacks back together
+@param: data_list
+        n_xaxis, n_yaxis, n_zaxis
+@return: image
+'''
+def stitch(data_list, n_xaxis, n_yaxis, n_zaxis):
+    box_along_x = []
+    x_strips = []
+    y_strips = []
+    for i in range(n_zaxis):
+        for j in range(n_yaxis):
+            for k in range(n_xaxis):
+                box_along_x.append(data_boxes[i * n_yaxis*n_xaxis + n_xaxis * j + k])
+            x_strip = np.concatenate(box_along_x, axis=2)
+            box_along_x = []
+            x_strips.append(x_strip)
+        y_strip = np.concatenate(x_strips, axis=1)
+        x_strips = []
+        y_strips.append(y_strip)
+    image = np.concatenate(y_strips, axis=0)
+    return image

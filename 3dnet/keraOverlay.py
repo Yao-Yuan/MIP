@@ -13,6 +13,43 @@ import scipy.ndimage.filters as filters
 from keras import backend as K
 from functools import partial
 from keras.callbacks import ModelCheckpoint, CSVLogger, LearningRateScheduler, ReduceLROnPlateau, EarlyStopping
+
+'''
+Box Data generator
+@param: data_dir
+        mask_dir
+        look_up_list
+        box_size - default 64
+        only_valid: default False
+@yield: n_box: number of boxes
+        boxes: boxes as in network dimension (n, x,y,z, channel)
+'''
+def generate_box_data(data_dir, mask_dir, lookup_list, box_size=64, batch_size=2, only_valid=False, complete=False):
+    i = 0
+    while True:
+        img_boxes = []
+        msk_boxes = []
+        for filename in lookup_list:
+            try:
+                sample = pydicom.read_file(os.path.join(data_dir, filename))
+                mask = pydicom.read_file(os.path.join(mask_dir, filename.split('.')[0] + '.result.dcm'))
+            except:
+                print("Error: unable to load data!")
+            number, img_boxes, msk_boxes = preproc.to3dpatches(sample.pixel_array, mask.pixel_array, depth=box_size, size=box_size, complete=complete, toBoxes=True, onlyValid=only_valid)
+            img_boxes, msk_boxes = preproc.normalize(img_boxes, msk_boxes)  # normalize to 0-1
+
+            n_iter = int(np.ceil(number/batch_size))
+            last = number%batch_size
+            if last:
+                for i in range(batch_size-last):                    #if not fully divided by batch, pad with the first box
+                    img_boxes.append(img_boxes[0])
+                    msk_boxes.append(msk_boxes[0])
+            if len(img_boxes)%batch_size:
+                raise ValueError('Very likely to append wrong number of box when not divided by batch size')
+            for i in range(n_iter):
+                yield np.array(img_boxes[i*batch_size:(i+1)*batch_size])[..., np.newaxis], np.array(msk_boxes[i*batch_size:(i+1)*batch_size])[..., np.newaxis]
+
+
 '''
 Generate data and mask batches to replace default data generator in keras and also preprocessing data
 @parm: data_dir - directory where data files (dicom files) is stored
@@ -42,31 +79,32 @@ def generate_batch_data(data_dir, mask_dir, look_up_list, batch_size=2, scaling=
                 mask = pydicom.read_file(os.path.join(mask_dir, filename.split('.')[0] + '.result.dcm'))
             except:
                 print("Error: unable to load data!")
-            image_batch.append(sample.pixel_array)
-            mask_batch.append(mask.pixel_array)
-            image_batch, mask_batch = preproc.normalize(image_batch, mask_batch)  # normalize to 0-1
+            image_batch.append(K.cast_to_floatx(sample.pixel_array))
+            mask_batch.append(K.cast_to_floatx(mask.pixel_array))
 
+            image_batch, mask_batch = preproc.normalize(image_batch, mask_batch)  # normalize to 0-1
         image_batch = utils.padImage(image_batch, 64)  # currently pad with 0 to test network
         mask_batch = utils.padImage(mask_batch, 64)
+
         #for n in range(batch_size):
         #    output_data_batch
-        image_batch = [filters.gaussian_filter(image, 1.0)[::scaling, ::scaling, ::scaling] for image in image_batch]
-        mask_batch = [filters.gaussian_filter(mask, 1.0)[::scaling, ::scaling, ::scaling] for mask in mask_batch]
+        #image_batch = [filters.gaussian_filter(image, 1.0)[::scaling, ::scaling, ::scaling] for image in image_batch]
+        #mask_batch = [filters.gaussian_filter(mask, 1.0)[::scaling, ::scaling, ::scaling] for mask in mask_batch]
+
+        image_batch = [image[::scaling, ::scaling, ::scaling] for image in image_batch]
+        mask_batch = [mask[::scaling, ::scaling, ::scaling] for mask in mask_batch]
 
         #print(np.array(mask_batch).shape)
         yield np.array(image_batch)[..., np.newaxis], np.array(mask_batch)[..., np.newaxis]
 
 
 def dice_coef(y_true, y_pred, smooth=1):
-    y_true_f = K.flatten(y_true)
-    y_pred_f = K.flatten(y_pred)
-    intersection = K.dot(y_true_f, K.transpose(y_pred_f))
-    union = K.dot(y_true_f, K.transpose(y_true_f))+K.dot(y_pred_f, K.transpose(y_pred_f))
-    return (2. * intersection + smooth) / (union + smooth)
+    intersection = K.sum(y_true * y_pred, axis=[1,2,3])
+    union = K.sum(y_true, axis=[1,2,3]) + K.sum(y_pred, axis=[1,2,3])
+    return K.mean( (2. * intersection + smooth) / (union + smooth), axis=0)
 
 def dice_coef_loss(y_true, y_pred):
-    return K.mean(1-dice_coef(y_true, y_pred), axis=-1)
-
+    return K.mean(1-dice_coef(y_true, y_pred))
 
 # learning rate schedule
 def step_decay(epoch, initial_lrate, drop, epochs_drop):

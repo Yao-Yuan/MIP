@@ -41,23 +41,6 @@ def localization_module(input_layer, n_filters):
     conv1 = convolution_block(input_layer, n_filters)
     conv2 = convolution_block(conv1, n_filters, kernel = (1,1,1))
     return conv2
-'''
-def dice_coef(y_true, y_pred):
-    y_true_f = K.flatten(y_true)
-    y_pred_f = K.flatten(y_pred)
-    intersection = K.sum(y_true_f * y_pred_f)
-    smooth = 1
-    return (2. * intersection + smooth) / (K.sum(y_true_f) + K.sum(y_pred_f) + smooth)
-'''
-
-def dice_coef(y_true, y_pred, smooth=1):
-    intersection = K.sum(y_true * y_pred, axis=[1,2,3])
-    union = K.sum(y_true, axis=[1,2,3]) + K.sum(y_pred, axis=[1,2,3])
-    K.print_tensor(intersection, message='')
-    return K.mean( (2. * intersection + smooth) / (union + smooth), axis=0)
-
-def dice_coef_loss(y_true, y_pred):
-    return 1.-dice_coef(y_true, y_pred)
 
 def conv_net(size = 256, activation_type = "sigmoid", n_slices = 32, depth = 5, n_base_filters = 16, dropout_rate = 0.3): 
     inputs = Input(shape=[n_slices, size, size, 1], name='image')

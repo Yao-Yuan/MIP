@@ -4,6 +4,7 @@ Functions to preprocessing input data
 '''
 
 import numpy as np
+from keras import backend as K
 
 '''
 Cut 3d stack to smaller 3d stackes
@@ -123,6 +124,6 @@ Normalize numpy data to 0-1
 '''
 def normalize(origin_data, mask_data, threshold_l = -1000, threshold_h = 2000):
     x_list = [ np.clip(image, threshold_l, threshold_h)  for image in origin_data]
-    x_list = [ (data-threshold_l)/(threshold_h-threshold_l) for data in x_list]
-    y_list = [(mask ==1024).astype(np.float32) for mask in mask_data]
+    x_list = [ K.cast_to_floatx((data-threshold_l)/(threshold_h-threshold_l)) for data in x_list]
+    y_list = [ K.cast_to_floatx(mask==1024) for mask in mask_data]
     return x_list, y_list
