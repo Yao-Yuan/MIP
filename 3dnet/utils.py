@@ -94,6 +94,18 @@ def padImage (image_list, box_size):
     return out
 
 '''
+Unpad images to original
+'''
+def unpadImage (image_list, unpad_depth):
+    out = []
+    for image in image_list:
+        out.append(image[:-unpad_depth,...])
+    print(out[0].shape)
+    return out
+
+
+
+'''
 Visulize 3d images
 @param: image - input 3d image
         threshold - thresholding the 3d image
@@ -155,21 +167,23 @@ def load_data(data_dir, mask_dir, look_up_list, sigma_image=4, sigma_mask=1, sca
     image_list = padImage(image_list, 64)  # currently pad with 0 to test network
     mask_list = padImage(mask_list, 64)
 
-    image_list = [filters.gaussian_filter(image, sigma_image)[::scaling, ::scaling, ::scaling] for image in image_list]
-    mask_list = [filters.gaussian_filter(mask, sigma_mask)[::scaling, ::scaling, ::scaling] for mask in mask_list]
+    if scaling:
+        image_list = [image[::scaling, ::scaling, ::scaling] for image in image_list]
+        mask_list = [mask[::scaling, ::scaling, ::scaling] for mask in mask_list]
+        #image_list = [filters.gaussian_filter(image, sigma_image)[::scaling, ::scaling, ::scaling] for image in image_list]
+        #mask_list = [filters.gaussian_filter(mask, sigma_mask)[::scaling, ::scaling, ::scaling] for mask in mask_list]
 
     if OPaslist:
         return image_list, mask_list  # output as list
     else:
-        return np.array(image_list)[..., np.newaxis], np.array(mask_list)[..., np.newaxis]  # output as array corresponding to network
-
+        return convert_data(image_list, mask_list)
 '''
 Stitch boxs/stacks back together
-@param: data_list
+@param: data_boxes
         n_xaxis, n_yaxis, n_zaxis
 @return: image
 '''
-def stitch(data_list, n_xaxis, n_yaxis, n_zaxis):
+def stitch(data_boxes, n_xaxis, n_yaxis, n_zaxis):
     box_along_x = []
     x_strips = []
     y_strips = []
@@ -185,3 +199,13 @@ def stitch(data_list, n_xaxis, n_yaxis, n_zaxis):
         y_strips.append(y_strip)
     image = np.concatenate(y_strips, axis=0)
     return image
+
+'''
+Convert list of data to data as numpy arrays that fit the CNN
+@param: data_list
+        mask_list
+@return: data
+         masks
+'''
+def convert_data(data_list, mask_list):
+    return np.array(data_list)[...,np.newaxis], np.array(mask_list)[..., np.newaxis]

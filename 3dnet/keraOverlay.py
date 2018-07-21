@@ -24,7 +24,7 @@ Box Data generator
 @yield: n_box: number of boxes
         boxes: boxes as in network dimension (n, x,y,z, channel)
 '''
-def generate_box_data(data_dir, mask_dir, lookup_list, box_size=64, batch_size=2, only_valid=False, complete=False):
+def generate_box_data(data_dir, mask_dir, lookup_list, box_size=64, batch_size=2, only_valid=False, complete=False, smooth=1.0):
     i = 0
     while True:
         img_boxes = []
@@ -35,8 +35,11 @@ def generate_box_data(data_dir, mask_dir, lookup_list, box_size=64, batch_size=2
                 mask = pydicom.read_file(os.path.join(mask_dir, filename.split('.')[0] + '.result.dcm'))
             except:
                 print("Error: unable to load data!")
-            number, img_boxes, msk_boxes = preproc.to3dpatches(sample.pixel_array, mask.pixel_array, depth=box_size, size=box_size, complete=complete, toBoxes=True, onlyValid=only_valid)
-            img_boxes, msk_boxes = preproc.normalize(img_boxes, msk_boxes)  # normalize to 0-1
+            #!!!!!!TO DO: check if it is better to normalize before cutting or before
+            sample, mask = preproc.normalizeImg(sample.pixel_array, mask.pixel_array)
+            if smooth:
+                sample = filters.gaussian_filter(sample, smooth)
+            number, img_boxes, msk_boxes = preproc.to3dpatches(sample, mask, depth=box_size, size=box_size, complete=complete, toBoxes=True, onlyValid=only_valid)
 
             n_iter = int(np.ceil(number/batch_size))
             last = number%batch_size
@@ -47,8 +50,7 @@ def generate_box_data(data_dir, mask_dir, lookup_list, box_size=64, batch_size=2
             if len(img_boxes)%batch_size:
                 raise ValueError('Very likely to append wrong number of box when not divided by batch size')
             for i in range(n_iter):
-                yield np.array(img_boxes[i*batch_size:(i+1)*batch_size])[..., np.newaxis], np.array(msk_boxes[i*batch_size:(i+1)*batch_size])[..., np.newaxis]
-
+                yield utils.convert_data(img_boxes[i*batch_size:(i+1)*batch_size], msk_boxes[i*batch_size:(i+1)*batch_size])
 
 '''
 Generate data and mask batches to replace default data generator in keras and also preprocessing data
@@ -95,8 +97,7 @@ def generate_batch_data(data_dir, mask_dir, look_up_list, batch_size=2, scaling=
         mask_batch = [mask[::scaling, ::scaling, ::scaling] for mask in mask_batch]
 
         #print(np.array(mask_batch).shape)
-        yield np.array(image_batch)[..., np.newaxis], np.array(mask_batch)[..., np.newaxis]
-
+        yield utils.convert_data((image_batch, mask_batch))
 
 def dice_coef(y_true, y_pred, smooth=1):
     intersection = K.sum(y_true * y_pred, axis=[1,2,3])
