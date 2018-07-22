@@ -111,7 +111,7 @@ Normalize data to 0-1 (also transform from dicom files to pixel arrays
 def normalizeDicom(origin_data, mask_data, threshold_l = -1000, threshold_h = 2000):
     x_list = [ np.clip(imagefile.pixel_array, threshold_l, threshold_h)  for imagefile in origin_data]
     x_list = [ (image_array-threshold_l)/(threshold_h-threshold_l) for image_array in x_list]
-    y_list = [(mskfile.pixel_array==1024).astype(np.float32) for mskfile in mask_data]
+    y_list = [ K.cast_to_floatx(mskfile.pixel_array==1024) for mskfile in mask_data]
     return x_list, y_list
 
 '''

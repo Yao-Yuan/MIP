@@ -150,7 +150,7 @@ Load data from directory
 @return: image_list
          mask_list
 '''
-def load_data(data_dir, mask_dir, look_up_list, sigma_image=4, sigma_mask=1, scaling=2, OPaslist=False):
+def load_data(data_dir, mask_dir, look_up_list, sigma_image=1.0, padding=True, scaling=1, OPaslist=False):
     image_list = []
     mask_list = []
     for filename in look_up_list:
@@ -164,14 +164,16 @@ def load_data(data_dir, mask_dir, look_up_list, sigma_image=4, sigma_mask=1, sca
 
     image_list, mask_list = preproc.normalize(image_list, mask_list)  # normalize to 0-1
 
-    image_list = padImage(image_list, 64)  # currently pad with 0 to test network
-    mask_list = padImage(mask_list, 64)
+    if padding:
+        image_list = padImage(image_list, 64)  # currently pad with 0 to test network
+        mask_list = padImage(mask_list, 64)
+
+    if sigma_image:
+        image_list = [filters.gaussian_filter(image, sigma_image) for image in image_list]
 
     if scaling:
         image_list = [image[::scaling, ::scaling, ::scaling] for image in image_list]
         mask_list = [mask[::scaling, ::scaling, ::scaling] for mask in mask_list]
-        #image_list = [filters.gaussian_filter(image, sigma_image)[::scaling, ::scaling, ::scaling] for image in image_list]
-        #mask_list = [filters.gaussian_filter(mask, sigma_mask)[::scaling, ::scaling, ::scaling] for mask in mask_list]
 
     if OPaslist:
         return image_list, mask_list  # output as list

@@ -24,6 +24,8 @@ Box Data generator
 @yield: n_box: number of boxes
         boxes: boxes as in network dimension (n, x,y,z, channel)
 '''
+
+
 def generate_box_data(data_dir, mask_dir, lookup_list, box_size=64, batch_size=2, only_valid=False, complete=False, smooth=1.0):
     i = 0
     while True:
@@ -35,7 +37,7 @@ def generate_box_data(data_dir, mask_dir, lookup_list, box_size=64, batch_size=2
                 mask = pydicom.read_file(os.path.join(mask_dir, filename.split('.')[0] + '.result.dcm'))
             except:
                 print("Error: unable to load data!")
-            #!!!!!!TO DO: check if it is better to normalize before cutting or before
+
             sample, mask = preproc.normalizeImg(sample.pixel_array, mask.pixel_array)
             if smooth:
                 sample = filters.gaussian_filter(sample, smooth)
@@ -52,6 +54,7 @@ def generate_box_data(data_dir, mask_dir, lookup_list, box_size=64, batch_size=2
             for i in range(n_iter):
                 yield utils.convert_data(img_boxes[i*batch_size:(i+1)*batch_size], msk_boxes[i*batch_size:(i+1)*batch_size])
 
+
 '''
 Generate data and mask batches to replace default data generator in keras and also preprocessing data
 @parm: data_dir - directory where data files (dicom files) is stored
@@ -65,7 +68,9 @@ Generate data and mask batches to replace default data generator in keras and al
         content = f.readlines()
         normal_namelist = [x.strip() for x in content] 
 '''
-def generate_batch_data(data_dir, mask_dir, look_up_list, batch_size=2, scaling=2):
+
+
+def generate_batch_data(data_dir, mask_dir, look_up_list, batch_size=2, scaling=2, smooth=0):
     i = 0
     while True:
         image_batch = []
@@ -84,32 +89,33 @@ def generate_batch_data(data_dir, mask_dir, look_up_list, batch_size=2, scaling=
             image_batch.append(K.cast_to_floatx(sample.pixel_array))
             mask_batch.append(K.cast_to_floatx(mask.pixel_array))
 
-            image_batch, mask_batch = preproc.normalize(image_batch, mask_batch)  # normalize to 0-1
+        image_batch, mask_batch = preproc.normalize(image_batch, mask_batch)  # normalize to 0-1
+        if smooth:
+            image_batch = [filters.gaussian_filter(image, smooth) for image in image_batch]   #Gaussian smooth decrease noise and make scaling resonable
+
         image_batch = utils.padImage(image_batch, 64)  # currently pad with 0 to test network
         mask_batch = utils.padImage(mask_batch, 64)
-
-        #for n in range(batch_size):
-        #    output_data_batch
-        #image_batch = [filters.gaussian_filter(image, 1.0)[::scaling, ::scaling, ::scaling] for image in image_batch]
-        #mask_batch = [filters.gaussian_filter(mask, 1.0)[::scaling, ::scaling, ::scaling] for mask in mask_batch]
 
         image_batch = [image[::scaling, ::scaling, ::scaling] for image in image_batch]
         mask_batch = [mask[::scaling, ::scaling, ::scaling] for mask in mask_batch]
 
-        #print(np.array(mask_batch).shape)
-        yield utils.convert_data((image_batch, mask_batch))
+        yield utils.convert_data(image_batch, mask_batch)
+
 
 def dice_coef(y_true, y_pred, smooth=1):
     intersection = K.sum(y_true * y_pred, axis=[1,2,3])
     union = K.sum(y_true, axis=[1,2,3]) + K.sum(y_pred, axis=[1,2,3])
     return K.mean( (2. * intersection + smooth) / (union + smooth), axis=0)
 
+
 def dice_coef_loss(y_true, y_pred):
     return K.mean(1-dice_coef(y_true, y_pred))
+
 
 # learning rate schedule
 def step_decay(epoch, initial_lrate, drop, epochs_drop):
     return initial_lrate * math.pow(drop, math.floor((1+epoch)/float(epochs_drop)))
+
 
 def get_callbacks(model_file, initial_learning_rate=0.0001, learning_rate_drop=0.5, learning_rate_epochs=None,
                   learning_rate_patience=50, logging_file="training.log", verbosity=1,
