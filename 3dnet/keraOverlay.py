@@ -61,6 +61,7 @@ Generate data and mask batches to replace default data generator in keras and al
        mask_dir - directory where mask files (dicom files) is stored
        look_up_list - a list that contains good data to be used (corresponding to data file names)
        batch_size - specify batch size (default: 2)
+       n_aug: number of augmented data per input data
 @yield: x_batch: generated data files batches (numpy arrays)
         y_batch: generated mask files batches (numpy arrays)
 @example to generate list from file:
@@ -70,12 +71,13 @@ Generate data and mask batches to replace default data generator in keras and al
 '''
 
 
-def generate_batch_data(data_dir, mask_dir, look_up_list, batch_size=2, scaling=2, smooth=0):
+def generate_batch_data(data_dir, mask_dir, look_up_list, batch_size=2, scaling=2, smooth=0, augument=False, n_aug=2):
     i = 0
+    iter = int(batch_size/(n_aug+1)) if augument else batch_size
     while True:
         image_batch = []
         mask_batch = []
-        for j in range(batch_size):
+        for j in range(iter):
             if i == len(look_up_list):  # shuffle the data for each epoch
                 i = 0
                 random.shuffle(look_up_list)
@@ -99,12 +101,15 @@ def generate_batch_data(data_dir, mask_dir, look_up_list, batch_size=2, scaling=
         image_batch = [image[::scaling, ::scaling, ::scaling] for image in image_batch]
         mask_batch = [mask[::scaling, ::scaling, ::scaling] for mask in mask_batch]
 
+        if augument:
+            key = utils.generate_key(5, n_aug)    #Remember to change here the number of total data augmentation types
+            image_batch, mask_batch = preproc.data_aug(image_batch, mask_batch, key)
         yield utils.convert_data(image_batch, mask_batch)
 
 
 def dice_coef(y_true, y_pred, smooth=1):
-    intersection = K.sum(y_true * y_pred, axis=[1,2,3])
-    union = K.sum(y_true, axis=[1,2,3]) + K.sum(y_pred, axis=[1,2,3])
+    intersection = K.sum(y_true * y_pred, axis=[1, 2, 3])
+    union = K.sum(y_true, axis=[1, 2, 3]) + K.sum(y_pred, axis=[1, 2, 3])
     return K.mean( (2. * intersection + smooth) / (union + smooth), axis=0)
 
 

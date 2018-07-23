@@ -133,3 +133,56 @@ def normalizeImg(image, mask, threshold_l = -1000, threshold_h = 2000):
     img =  K.cast_to_floatx((img-threshold_l)/(threshold_h-threshold_l))
     msk =  K.cast_to_floatx(mask==1024)
     return img, msk
+
+
+'''
+Augmente data
+@param: image_batch
+        mask_batch
+        key: a list of number that indicates the augmentation type
+
+@return: aug_dataList
+         aug_maskList
+'''
+def data_aug(image_batch, mask_batch, key):
+    aug_dataList = []
+    aug_maskList = []
+    for image, mask in zip(image_batch, mask_batch):
+        aug_dataList.append(image)
+        aug_maskList.append(mask)
+        for index in key:
+            auged_image, auged_mask = get_aug(image, mask, index)   #as some data augumentation might not change mask, so put image and mask together
+            aug_dataList.append(auged_image)
+            aug_maskList.append(auged_mask)
+
+    return aug_dataList, aug_maskList
+
+'''
+Generate augmented data
+@param: index
+        data
+        mask
+@return: aug_data
+         aug_mask        
+'''
+def get_aug(data, mask, index):
+    switch = {0: flip_data(data, mask, 0), 1: flip_data(data, mask, 1),
+              2: flip_data(data, mask, 2), 3: rotate_data(data, mask, (0, 1)),
+              4: rotate_data(data, mask, (1, 2))}
+    return switch.get(index, 0)
+
+'''
+Flip data and mask
+'''
+def flip_data(data, mask, axis):
+    print("fliping", axis)
+    return np.flip(data, axis=axis), np.flip(mask, axis=axis)
+
+'''
+Rotate_data and mask
+@param: times: the number times that an array that will be rotated 90 degree
+'''
+def rotate_data(data, mask, axis):
+    print("rotate", axis)
+    return np.rot90(data, 1, axis), np.rot90(mask, 1, axis)
+

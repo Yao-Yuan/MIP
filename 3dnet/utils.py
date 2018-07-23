@@ -11,6 +11,7 @@ from skimage import measure, morphology
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import preproc
 import scipy.ndimage.filters as filters
+import random
 
 '''
 Filter image and mask files based on a text file and designated size and also filter out unnatural ones
@@ -211,3 +212,12 @@ Convert list of data to data as numpy arrays that fit the CNN
 '''
 def convert_data(data_list, mask_list):
     return np.array(data_list)[...,np.newaxis], np.array(mask_list)[..., np.newaxis]
+
+'''
+Generate random key for data augmentation
+@param: max: max number of possible number
+        n
+@return: a list of n number that is in range
+'''
+def generate_key(max, n):
+    return random.sample(range(max), n)
