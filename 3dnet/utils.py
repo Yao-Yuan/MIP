@@ -11,6 +11,7 @@ from skimage import measure, morphology
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import preproc
 import scipy.ndimage.filters as filters
+import scipy.misc.imresize as resize
 import random
 
 '''
@@ -101,10 +102,7 @@ def unpadImage (image_list, unpad_depth):
     out = []
     for image in image_list:
         out.append(image[:-unpad_depth,...])
-    print(out[0].shape)
     return out
-
-
 
 '''
 Visulize 3d images
@@ -244,6 +242,20 @@ def stitch(data_boxes, n_xaxis, n_yaxis, n_zaxis):
         y_strips.append(y_strip)
     image = np.concatenate(y_strips, axis=0)
     return image
+
+
+'''
+Scale back images
+@param: image_list: images
+        output_size: output size
+@return: re-scaled images
+'''
+def scale_images(image_list, output_size):
+    output_list = []
+    for image in image_list:
+        output_list.append(resize(image, output_size, interp='nearest'))
+    return output_list
+
 
 '''
 Convert list of data to data as numpy arrays that fit the CNN
