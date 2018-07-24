@@ -11,7 +11,6 @@ from skimage import measure, morphology
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import preproc
 import scipy.ndimage.filters as filters
-import scipy.misc.imresize as resize
 import random
 
 '''
@@ -250,10 +249,11 @@ Scale back images
         output_size: output size
 @return: re-scaled images
 '''
-def scale_images(image_list, output_size):
+def scale_images(image_list, output_size = 256):
     output_list = []
+    resize_factor = output_size/image_list[0].shape[0]
     for image in image_list:
-        output_list.append(resize(image, output_size, interp='nearest'))
+        output_list.append(scipy.ndimage.interpolation.zoom(image, resize_factor, mode='nearest'))
     return output_list
 
 
