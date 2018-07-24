@@ -180,6 +180,48 @@ def load_data(data_dir, mask_dir, look_up_list, sigma_image=1.0, padding=True, s
         return image_list, mask_list  # output as list
     else:
         return convert_data(image_list, mask_list)
+
+
+'''
+Load data from directory
+@param: image_dir
+        mask_dir
+        look_up_list
+        scaling
+        OPaslist
+
+@return: image_list
+         mask_list
+'''
+
+
+def load_images(data_dir, look_up_list, sigma_image=1.0, padding=True, scaling=1, OPaslist=False):
+    image_list = []
+    for filename in look_up_list:
+        try:
+            sample = pydicom.read_file(os.path.join(data_dir, filename))
+        except:
+            print("Error: unable to load data!")
+        image_list.append(sample.pixel_array)
+
+    image_list, _ = preproc.normalize(image_list, image_list)  # normalize to 0-1
+
+    if padding:
+        image_list = padImage(image_list, 64)  # currently pad with 0 to test network
+
+    if sigma_image:
+        image_list = [filters.gaussian_filter(image, sigma_image) for image in image_list]
+
+    if scaling:
+        image_list = [image[::scaling, ::scaling, ::scaling] for image in image_list]
+
+    if OPaslist:
+        return image_list  # output as list
+    else:
+        images, _ = convert_data(image_list, image_list)
+        return images
+
+
 '''
 Stitch boxs/stacks back together
 @param: data_boxes

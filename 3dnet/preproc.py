@@ -166,10 +166,10 @@ Generate augmented data
          aug_mask        
 '''
 def get_aug(data, mask, index):
-    switch = {0: flip_data(data, mask, 0), 1: flip_data(data, mask, 1),
-              2: flip_data(data, mask, 2), 3: rotate_data(data, mask, (0, 1)),
-              4: rotate_data(data, mask, (1, 2))}
-    return switch.get(index, 0)
+    switch = {0: lambda : flip_data(data, mask, 0), 1: lambda : flip_data(data, mask, 1),
+              2: lambda : flip_data(data, mask, 2), 3: lambda : rotate_data(data, mask, (0, 1)),
+              4: lambda : rotate_data(data, mask, (1, 2))}
+    return switch.get(index)()
 
 '''
 Flip data and mask
