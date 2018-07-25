@@ -148,7 +148,7 @@ Load data from directory
 @return: image_list
          mask_list
 '''
-def load_data(data_dir, mask_dir, look_up_list, sigma_image=1.0, padding=True, scaling=1, OPaslist=False):
+def load_data(data_dir, mask_dir, look_up_list, sigma_image=1.0, padding=True, scaling=None, OPaslist=False):
     image_list = []
     mask_list = []
     for filename in look_up_list:
@@ -170,8 +170,10 @@ def load_data(data_dir, mask_dir, look_up_list, sigma_image=1.0, padding=True, s
         image_list = [filters.gaussian_filter(image, sigma_image) for image in image_list]
 
     if scaling:
-        image_list = [image[::scaling, ::scaling, ::scaling] for image in image_list]
-        mask_list = [mask[::scaling, ::scaling, ::scaling] for mask in mask_list]
+        size = image_list[0].shape[0]
+        desired_size = size/scaling
+        image_list = utils.scale_images(image_list, desired_size)
+        mask_list = utils.scale_images(mask_list, desired_size)
 
     if OPaslist:
         return image_list, mask_list  # output as list
@@ -192,7 +194,7 @@ Load data from directory
 '''
 
 
-def load_images(data_dir, look_up_list, sigma_image=1.0, padding=True, scaling=1, OPaslist=False):
+def load_images(data_dir, look_up_list, sigma_image=1.0, padding=True, scaling=None, OPaslist=False):
     image_list = []
     for filename in look_up_list:
         try:
@@ -210,7 +212,9 @@ def load_images(data_dir, look_up_list, sigma_image=1.0, padding=True, scaling=1
         image_list = [filters.gaussian_filter(image, sigma_image) for image in image_list]
 
     if scaling:
-        image_list = [image[::scaling, ::scaling, ::scaling] for image in image_list]
+        size = image_list[0].shape[0]
+        desired_size = size / scaling
+        image_list = utils.scale_images(image_list, desired_size)
 
     if OPaslist:
         return image_list  # output as list

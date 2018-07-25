@@ -26,7 +26,7 @@ Box Data generator
 '''
 
 
-def generate_box_data(data_dir, mask_dir, lookup_list, box_size=64, batch_size=2, only_valid=False, complete=False, smooth=1.0):
+def generate_box_data(data_dir, mask_dir, lookup_list, box_size=64, batch_size=2, only_valid=False, complete=False, smooth=1.0, augument=False, n_aug=2):
     i = 0
     while True:
         img_boxes = []
@@ -71,7 +71,7 @@ Generate data and mask batches to replace default data generator in keras and al
 '''
 
 
-def generate_batch_data(data_dir, mask_dir, look_up_list, batch_size=2, scaling=2, smooth=0, augument=False, n_aug=2):
+def generate_batch_data(data_dir, mask_dir, look_up_list, batch_size=2, scaling=None, smooth=0, augument=False, n_aug=2):
     i = 0
     iter = int(batch_size/(n_aug+1)) if augument else batch_size
     while True:
@@ -97,9 +97,14 @@ def generate_batch_data(data_dir, mask_dir, look_up_list, batch_size=2, scaling=
 
         image_batch = utils.padImage(image_batch, 64)  # currently pad with 0 to test network
         mask_batch = utils.padImage(mask_batch, 64)
+        size = image_batch[0].shape[0]
+        desired_size = size/scaling
+        image_batch = utils.scale_images(image_batch, desired_size)
+        mask_batch = utils.scale_images(mask_batch, desired_size)
 
-        image_batch = [image[::scaling, ::scaling, ::scaling] for image in image_batch]
-        mask_batch = [mask[::scaling, ::scaling, ::scaling] for mask in mask_batch]
+        print(image_batch[0].shape)
+        #image_batch = [image[::scaling, ::scaling, ::scaling] for image in image_batch]
+        #mask_batch = [mask[::scaling, ::scaling, ::scaling] for mask in mask_batch]
 
         if augument:
             key = utils.generate_key(5, n_aug)    #Remember to change here the number of total data augmentation types
